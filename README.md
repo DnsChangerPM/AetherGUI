@@ -10,7 +10,7 @@ Aethon is an independent Windows and Android client for the official [CluvexStud
 
 - Extended Android support down to **Android 7.0 (API 24)**: `minSdk` is now 24, and notification-channel creation is version-guarded so the VPN service no longer crashes on Android 7.x.
 - Android 7.0 through the newest Android release is supported; ARMv7, ARM64, and x86_64.
-- Windows: **Windows 10/11 x64** remains the supported desktop range. The desktop UI is rendered by the Microsoft Edge WebView2 runtime, which Microsoft only ships for Windows 10 (1903+) and Windows 11, so Windows 8.1 and earlier cannot run this client in any build.
+- Windows: **Windows 10/11 x64** is the supported desktop range to *run* the app. The installers also work on Windows 8.1, but the desktop UI is rendered by the Microsoft Edge WebView2 runtime, which Microsoft only ships for Windows 10 (1903+) and Windows 11, so on Windows 8.1 and earlier the app cannot start; on launch it shows a clear English and Persian explanation of the requirement instead of a technical WebView2 error.
 
 ### Windows routing and settings
 
@@ -48,7 +48,7 @@ Aethon is an independent Windows and Android client for the official [CluvexStud
 - Android version code: `28`
 - Windows Aether core: `1.9.0`; Android Aether core: `1.9.0`
 - Xray routing engine: `26.3.27`
-- Windows: Windows 10/11 x64 (WebView2 runtime requirement; Windows 8.1 is not runnable)
+- Windows: Windows 10/11 x64 (required to run: WebView2 runtime). Installers also install on Windows 8.1, where the app explains the requirement at startup
 - Android: Android 7.0 (API 24) or newer; ARMv7, ARM64, and x86_64
 
 Existing VPN services, state management, routing recovery, Smart Connect, and split tunneling remain in place.

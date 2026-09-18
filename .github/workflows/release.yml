@@ -196,9 +196,14 @@ jobs:
           # fetch scripts hit a runner where the cmdlet is not resolvable in Windows
           # PowerShell 5.1, and this step keeps the same dependency-free path.
           function Get-Sha256OfFile([string]$Path) {
+            # OpenRead + ComputeHash rather than ComputeFile/Get-FileHash: the runner's
+            # legacy PowerShell runtime does not resolve either of those.
             $sha = [System.Security.Cryptography.SHA256]::Create()
             try {
-              return ([System.BitConverter]::ToString($sha.ComputeFile($Path))).Replace("-", "").ToLowerInvariant()
+              $stream = [System.IO.File]::OpenRead($Path)
+              try {
+                return ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-", "").ToLowerInvariant()
+              } finally { $stream.Dispose() }
             } finally { $sha.Dispose() }
           }
           New-Item -ItemType Directory -Force release | Out-Null
@@ -341,4 +346,4 @@ jobs:
 
             The bundled Aether Core and Xray routing engine are fetched from official releases and SHA-256 verified during the build.
             Windows 10/11 x64 and Android 7.0+ are supported. Windows binaries and installers are Authenticode signed and timestamped; Android APKs are release-signed.
-            Note: the Windows client requires the Microsoft Edge WebView2 runtime, which Microsoft only ships for Windows 10 (1903+) and Windows 11 — Windows 8.1 and earlier cannot run it.
+            Note: the Windows client requires the Microsoft Edge WebView2 runtime, which Microsoft only ships for Windows 10 (1903+) and Windows 11 — Windows 8.1 and earlier can install it, but the app shows an English/Persian explanation of the requirement at startup instead of running.

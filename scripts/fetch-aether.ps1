@@ -20,9 +20,15 @@ function Download-WithRetry {
 # cmdlet is not always resolvable inside Windows PowerShell 5.1, while the SHA256 type is
 # always present. Same algorithm, no cmdlet dependency.
 function Get-Sha256OfFile([string]$Path) {
+  # OpenRead + ComputeHash rather than ComputeFile/Get-FileHash: the runner's Windows
+  # PowerShell 5.1 is a legacy runtime where neither resolves, while the stream API has
+  # existed since .NET 2.0.
   $sha = [System.Security.Cryptography.SHA256]::Create()
   try {
-    return ([System.BitConverter]::ToString($sha.ComputeFile($Path))).Replace("-", "").ToLowerInvariant()
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+      return ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-", "").ToLowerInvariant()
+    } finally { $stream.Dispose() }
   } finally { $sha.Dispose() }
 }
 
