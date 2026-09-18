@@ -4,6 +4,8 @@ The Android client is a native Java application using Android `VpnService`. It r
 
 Version 2.0.0 provides the current Android VPN interface, localization, connection telemetry, split tunneling, update checks, resumable APK downloads, verification, notifications, and Android package installation handoff.
 
+Minimum supported Android: 7.0 (API 24), up to the newest Android release.
+
 Supported APK ABIs:
 
 - ARMv7 (`armeabi-v7a`) for compatible 32-bit Android devices.

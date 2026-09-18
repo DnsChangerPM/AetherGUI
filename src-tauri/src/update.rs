@@ -6,8 +6,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 
-const RELEASE_API: &str = "https://api.github.com/repos/hamvex/AetherGUI/releases?per_page=30";
-const DOWNLOAD_PREFIX: &str = "https://github.com/hamvex/AetherGUI/releases/download/";
+const RELEASE_API: &str = "https://api.github.com/repos/DnsChangerPM/AetherGUI/releases?per_page=30";
+const DOWNLOAD_PREFIX: &str = "https://github.com/DnsChangerPM/AetherGUI/releases/download/";
 const CHECKSUM_ASSET: &str = "SHA256SUMS.txt";
 
 /// The publisher every downloaded installer must be signed by, pinned into the binary at
@@ -501,7 +501,7 @@ mod tests {
 
     #[test]
     fn a_genuine_release_asset_url_is_accepted_unchanged() {
-        let asset = "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe";
+        let asset = "https://github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe";
         assert_eq!(asset, pinned_release_url(asset).unwrap().as_str());
     }
 
@@ -510,14 +510,14 @@ mod tests {
         // The whole point of parsing: every one of these passes a `starts_with` test on
         // DOWNLOAD_PREFIX, and every one of them resolves somewhere else.
         for escape in [
-            "https://github.com/hamvex/AetherGUI/releases/download/../../../../evil.exe",
-            "https://github.com/hamvex/AetherGUI/releases/download/v1/../../../../../evil.exe",
-            "https://github.com/hamvex/AetherGUI/releases/download/..%2f..%2f..%2f..%2fevil.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/../../../../evil.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/v1/../../../../../evil.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/..%2f..%2f..%2f..%2fevil.exe",
         ] {
             let resolved = reqwest::Url::parse(escape).unwrap();
             let escaped = !resolved
                 .path()
-                .starts_with("/hamvex/AetherGUI/releases/download/");
+                .starts_with("/DnsChangerPM/AetherGUI/releases/download/");
             assert_eq!(
                 escaped,
                 pinned_release_url(escape).is_err(),
@@ -531,13 +531,13 @@ mod tests {
     #[test]
     fn a_url_that_is_not_an_official_release_download_is_refused() {
         for rejected in [
-            "http://github.com/hamvex/AetherGUI/releases/download/v2.1.1/x.exe",
-            "https://github.com.evil.test/hamvex/AetherGUI/releases/download/v2.1.1/x.exe",
-            "https://evil.test/hamvex/AetherGUI/releases/download/v2.1.1/x.exe",
-            "https://github.com:8443/hamvex/AetherGUI/releases/download/v2.1.1/x.exe",
-            "https://user:pass@github.com/hamvex/AetherGUI/releases/download/v2.1.1/x.exe",
+            "http://github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/x.exe",
+            "https://github.com.evil.test/DnsChangerPM/AetherGUI/releases/download/v2.1.1/x.exe",
+            "https://evil.test/DnsChangerPM/AetherGUI/releases/download/v2.1.1/x.exe",
+            "https://github.com:8443/DnsChangerPM/AetherGUI/releases/download/v2.1.1/x.exe",
+            "https://user:pass@github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/x.exe",
             "https://github.com/someone-else/AetherGUI/releases/download/v2.1.1/x.exe",
-            "https://github.com/hamvex/AetherGUI/archive/refs/tags/v2.1.1.zip",
+            "https://github.com/DnsChangerPM/AetherGUI/archive/refs/tags/v2.1.1.zip",
             "file:///C:/Windows/System32/calc.exe",
             "not a url at all",
             "",
@@ -554,15 +554,15 @@ mod tests {
         let tag = "v2.1.1";
         let asset = "Aethon-VPN-v2.1.1-Windows-x64-Installer.exe";
         let genuine =
-            format!("https://github.com/hamvex/AetherGUI/releases/download/{tag}/{asset}");
+            format!("https://github.com/DnsChangerPM/AetherGUI/releases/download/{tag}/{asset}");
         assert_eq!(
             genuine,
             pinned_release_asset(&genuine, tag, asset).unwrap().as_str()
         );
         assert_eq!(
-            "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/SHA256SUMS.txt",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/SHA256SUMS.txt",
             pinned_release_asset(
-                "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/SHA256SUMS.txt",
+                "https://github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/SHA256SUMS.txt",
                 tag,
                 CHECKSUM_ASSET
             )
@@ -574,17 +574,17 @@ mod tests {
         // lets them through. None of them is the artifact that was asked for.
         for mismatched in [
             // A different file in the same release.
-            "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/something-else.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/something-else.exe",
             // The right filename, but attached to a different release.
-            "https://github.com/hamvex/AetherGUI/releases/download/v0.1.0/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/v0.1.0/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
             // The right name buried one level deeper than a release asset can live.
-            "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/nested/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/nested/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
             // The name as a query string rather than the path that is actually fetched.
-            "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/other.exe?name=Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/other.exe?name=Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
             // The name as a fragment, likewise never sent to the server.
-            "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/other.exe#Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/v2.1.1/other.exe#Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
             // No tag segment at all.
-            "https://github.com/hamvex/AetherGUI/releases/download/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
+            "https://github.com/DnsChangerPM/AetherGUI/releases/download/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe",
         ] {
             assert!(
                 pinned_release_asset(mismatched, tag, asset).is_err(),

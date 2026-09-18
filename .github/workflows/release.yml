@@ -299,28 +299,14 @@ jobs:
           generate_release_notes: true
           files: release/*
           body: |
-            # Aethon VPN v2.1.1
+            # Aethon VPN v2.2.0
 
-            This is a stability and performance release of Aethon VPN.
+            Compatibility release for the Aethon VPN fork.
 
-            - Protocol-aware MTU so WARP-in-WARP no longer fragments at 1500
-            - IPv6 tunnel routes are only advertised when the network actually carries IPv6
-            - Repeated Connect taps no longer tear down and rebuild a healthy tunnel
-            - VPN location is cached per exit IP and backs off on provider rate limits
-            - Correct connection state on launch instead of a brief false "Disconnected"
-            - Update checks are interval limited and use the latest-release endpoint
-            - Update APKs are re-verified (SHA-256 and signing certificate) before install
-            - Home screen widget toggles are restricted to this application
-            - LAN SOCKS5 sharing now requires generated per-session credentials
-
-            Security hardening in this release:
-
-            - Android location lookups now verify the TLS hostname, not just the certificate chain
-            - The Windows updater verifies the Authenticode publisher, not only the SHA-256
-            - Release URLs are parsed and pinned rather than prefix-matched
-            - The installer is held open across verification and launch, closing a swap window
-            - A dead 457 KB library is no longer packaged into the MSI
-            - CI actions are pinned to commit SHAs and workflow permissions are least-privilege
+            - Android support extended down to Android 7.0 (API 24): minSdk 24, with notification-channel creation version-guarded so the VPN service works on Android 7.x
+            - In-app update checks now use the DnsChangerPM/AetherGUI release endpoints, so this fork self-updates from its own releases
+            - All 2.1.1 stability, performance, and security fixes remain in place (protocol-aware MTU, IPv6 route advertisement, update APK re-verification, pinned CI actions, least-privilege workflow permissions)
 
             The bundled Aether Core and Xray routing engine are fetched from official releases and SHA-256 verified during the build.
-            Windows 10/11 x64 and Android 8.0+ are supported. Windows binaries and installers are Authenticode signed and timestamped; Android APKs are release-signed.
+            Windows 10/11 x64 and Android 7.0+ are supported. Windows binaries and installers are Authenticode signed and timestamped; Android APKs are release-signed.
+            Note: the Windows client requires the Microsoft Edge WebView2 runtime, which Microsoft only ships for Windows 10 (1903+) and Windows 11 — Windows 8.1 and earlier cannot run it.

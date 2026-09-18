@@ -2493,6 +2493,9 @@ public final class AetherVpnService extends VpnService {
     }
 
     private void createNotificationChannel() {
+        // NotificationChannel and createNotificationChannel do not exist before API 26 (Android 8.0);
+        // on Android 7.x the system simply has no channel concept, so there is nothing to create.
+        if (Build.VERSION.SDK_INT < 26) return;
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, getString(R.string.notification_channel), NotificationManager.IMPORTANCE_LOW);
         channel.setDescription(getString(R.string.notification_channel_summary));
         NotificationManager manager = getSystemService(NotificationManager.class);
