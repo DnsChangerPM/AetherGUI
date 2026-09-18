@@ -92,7 +92,16 @@ jobs:
       # Runs after the sidecars are fetched and before anything is built, because it is
       # what enforces the SHA-256 values this repository pins for both engine binaries.
       - name: Test Rust backend
-        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'cargo-test.log'
+          cargo test --manifest-path src-tauri/Cargo.toml --locked 2>&1 | Tee-Object -FilePath $log | Out-Host
+          if ($LASTEXITCODE -ne 0) {
+            # Compiler diagnostics end at the tail of the output, so surfacing the last
+            # lines keeps a broken build diagnosable from the run annotations alone.
+            Get-Content $log -Tail 60 | ForEach-Object { Write-Host "::error::[cargo-test] $_" }
+            exit 1
+          }
 
       - name: Select Windows signing configuration
         id: signing
