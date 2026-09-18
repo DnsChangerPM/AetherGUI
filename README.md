@@ -42,7 +42,7 @@ Aethon is an independent Windows and Android client for the official [CluvexStud
 - Android version code: `23`
 - Windows Aether core: `1.9.0`; Android Aether core: `1.9.0`
 - Xray routing engine: `26.3.27`
-- Windows: Windows 10/11 x64
+- Windows: Windows 10/11 x64; Windows 8.1 x64 via the dedicated 8.1 installer or portable package
 - Android: Android 8.0 or newer; ARMv7, ARM64, and x86_64
 
 Existing VPN services, state management, routing recovery, Smart Connect, and split tunneling remain in place.
@@ -52,9 +52,11 @@ Existing VPN services, state management, routing recovery, Smart Connect, and sp
 Download the release files from [Aethon 2.1.1](https://github.com/hamvex/AetherGUI/releases/tag/v2.1.1):
 
 - [`Aethon-VPN-v2.1.1-all-platforms.zip`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-all-platforms.zip) — Windows and Android 2.1.1 release archive.
-- [`Aethon-VPN-v2.1.1-Windows-x64-Installer.exe`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe) — recommended Windows installer.
-- [`Aethon-VPN-v2.1.1-Windows-x64.msi`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64.msi) — Windows MSI.
-- [`Aethon-VPN-v2.1.1-Windows-x64-portable.zip`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64-portable.zip) — portable Windows package.
+- [`Aethon-VPN-v2.1.1-Windows-x64-Installer.exe`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe) — recommended Windows 10/11 installer.
+- [`Aethon-VPN-v2.1.1-Windows-x64.msi`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64.msi) — Windows 10/11 MSI.
+- [`Aethon-VPN-v2.1.1-Windows-x64-portable.zip`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64-portable.zip) — portable Windows 10/11 package.
+- [`Aethon-VPN-v2.1.1-Windows-8.1-x64-Installer.exe`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-8.1-x64-Installer.exe) — Windows 8.1 installer with bundled WebView2 109.
+- [`Aethon-VPN-v2.1.1-Windows-8.1-x64-portable.zip`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-8.1-x64-portable.zip) — Windows 8.1 portable package with bundled WebView2 109. Extract and run `Aethon.cmd`.
 - [`Aethon-VPN-v2.1.1-Android-Universal.apk`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Android-Universal.apk) — Android universal APK containing ARMv7, ARM64, and x86_64 libraries.
 - [`Aethon-VPN-v2.1.1-Android-ARMv7.apk`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Android-ARMv7.apk) — 32-bit ARM APK.
 - [`Aethon-VPN-v2.1.1-Android-ARM64.apk`](https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Android-ARM64.apk) — 64-bit ARM APK.
@@ -75,6 +77,7 @@ https://api.github.com/repos/hamvex/AetherGUI/releases/latest
 Future releases must include:
 
 - `Aethon-VPN-v<version>-Windows-x64-Installer.exe`
+- `Aethon-VPN-v<version>-Windows-8.1-x64-Installer.exe` and/or `Aethon-VPN-v<version>-Windows-8.1-x64-portable.zip`
 - `Aethon-VPN-v<version>-Android-Universal.apk`
 - SHA-256 asset digests supplied by GitHub or a `SHA256SUMS.txt` asset
 - Release notes in the GitHub release body
@@ -84,7 +87,7 @@ No custom update backend is required. If the Android APK is distributed through 
 
 ## Windows usage
 
-1. Install the x64 setup package or extract the portable archive.
+1. On Windows 10/11, install the x64 setup package or extract the portable archive. On Windows 8.1, use the dedicated 8.1 installer or extract the 8.1 portable archive and run `Aethon.cmd`. See [Windows 8.1](docs/README-Windows-8.1.md).
 2. Launch Aethon.
 3. Keep **VPN Mode** selected for system-wide routing, or choose **Manual SOCKS5** for proxy-only use.
 4. Select a protocol and scan mode, then press **Connect**.
@@ -120,7 +123,7 @@ The Android application ID remains `io.github.hamvex.aethergui` for update compa
 
 ### Prerequisites
 
-- Windows 10/11 x64
+- Windows 10/11 x64 (Windows 8.1 packages are produced by the same workflow)
 - Node.js 22
 - Rust stable with the `x86_64-pc-windows-msvc` target
 - Visual Studio Build Tools with MSVC
@@ -165,7 +168,13 @@ After both platform builds complete:
 npm run package:release
 ```
 
-This creates Windows x64 installers, portable files, architecture-specific Android packages, checksums, and `Aethon-VPN-v2.1.1-all-platforms.zip` under `release`.
+This creates Windows x64 installers, portable files, Windows 8.1 installer and portable packages (WebView2 109 bundled), architecture-specific Android packages, checksums, and `Aethon-VPN-v2.1.1-all-platforms.zip` under `release`.
+
+Windows 8.1 artifacts can also be built on their own after a Windows build:
+
+```powershell
+npm run package:win81
+```
 
 ## Verification
 

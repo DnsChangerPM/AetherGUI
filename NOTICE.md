@@ -5,6 +5,8 @@ Aethon is an independent graphical frontend maintained by hamvex.
 This application bundles the Aether executable from https://github.com/CluvexStudio/Aether.
 Aether is licensed under GNU AGPL v3.0. The bundled executable is downloaded from the official v1.9.0 release and verified against the publisher-provided SHA-256 checksum during reproducible builds. Aether and its marks are subject to the upstream project's TRADEMARK.md policy; Firstham AetherGui is an independent frontend and is not endorsed by CluvexStudio.
 
+Windows 8.1 installers and portable packages additionally bundle Microsoft Edge WebView2 Fixed Version 109.0.1518.78, the last runtime that still launches on Windows 8.1. The cabinet is pinned by URL and size in `scripts/win81-pins.json` and `msedgewebview2.exe` is required to carry a Microsoft Authenticode signature before it is packed. WebView2 is © Microsoft Corporation.
+
 System-wide VPN Mode bundles Xray v26.3.27 from https://github.com/XTLS/Xray-core as the TUN and SOCKS5 routing engine. Xray is licensed under MPL-2.0. The unmodified official Windows archive is pinned to SHA-256 `d004c39288ce9ada487c6f398c7c545f7d749e44bdfdd59dbc9f865afba4e1ad`; the extracted `xray.exe` is pinned separately to SHA-256 `15c2d007954ac53ba69b80ec91242786b3c0b71d52649165b4ca1d5cc96ef8f1`. The license is distributed at `third-party/xray-LICENSE.txt`. Update the version, digests, generated-configuration tests, and this notice together.
 
 The sing-box license is retained for historical reference only. sing-box is not included in current Aethon releases.

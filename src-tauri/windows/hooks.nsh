@@ -1,3 +1,20 @@
+!include "LogicLib.nsh"
+!include "WinVer.nsh"
+
+!macro NSIS_HOOK_PREINSTALL
+  ; The Evergreen WebView2 bootstrapper this installer embeds no longer installs on
+  ; Windows 8.1. Fail immediately with the dedicated 8.1 package name rather than
+  ; letting the bootstrapper abort later with an unhelpful error.
+  ${IfNot} ${AtLeastWin10}
+    ${If} ${AtLeastWin8.1}
+      MessageBox MB_OK|MB_ICONINFORMATION "Windows 8.1 needs the dedicated Aethon installer (Aethon-VPN-v*-Windows-8.1-x64-Installer.exe) or the Windows 8.1 portable zip. This installer is for Windows 10 and 11."
+    ${Else}
+      MessageBox MB_OK|MB_ICONSTOP "Aethon requires Windows 10/11 x64, or Windows 8.1 x64 with the dedicated 8.1 installer."
+    ${EndIf}
+    Abort
+  ${EndIf}
+!macroend
+
 !macro NSIS_HOOK_POSTINSTALL
   Delete "$DESKTOP\AetherGUI.lnk"
   IfSilent desktop_shortcut_done

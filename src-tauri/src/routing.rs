@@ -1797,7 +1797,7 @@ fn cleanup_owned_adapters(keep: Option<&str>) -> usize {
     {
         let keep = keep.unwrap_or("").replace('\'', "''");
         let script = format!(
-            "$keep='{keep}'; $ids=@(Get-NetAdapter -Name 'AethonTun-*','FirsthamAether' -ErrorAction SilentlyContinue | Where-Object Name -ne $keep | ForEach-Object PnPDeviceID); $ids += @(Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | Where-Object {{ $_.FriendlyName -eq 'FirsthamAether' -or $_.FriendlyName -like 'AethonTun-*' }} | ForEach-Object InstanceId); $ids | Where-Object {{ $_ }} | Sort-Object -Unique | ForEach-Object {{ & pnputil.exe /remove-device $_ | Out-Null; $_ }}"
+            "$keep='{keep}'; $ids=@(Get-NetAdapter -Name 'AethonTun-*','FirsthamAether' -ErrorAction SilentlyContinue | Where-Object Name -ne $keep | ForEach-Object PnPDeviceID); $ids += @(Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | Where-Object {{ $_.FriendlyName -eq 'FirsthamAether' -or $_.FriendlyName -like 'AethonTun-*' }} | ForEach-Object InstanceId); $ids | Where-Object {{ $_ }} | Sort-Object -Unique | ForEach-Object {{ $id=$_; & pnputil.exe /remove-device $id 2>$null | Out-Null; if ($LASTEXITCODE -ne 0) {{ Get-PnpDevice -InstanceId $id -ErrorAction SilentlyContinue | Disable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue | Out-Null; Get-PnpDevice -InstanceId $id -ErrorAction SilentlyContinue | Remove-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue | Out-Null }}; $id }}"
         );
         let mut command = Command::new("powershell.exe");
         command.args([

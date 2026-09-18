@@ -38,6 +38,12 @@ if ($env:AETHON_SIGN_SCRIPT) {
 }
 Compress-Archive -Path (Join-Path $portableDir "*") -DestinationPath (Join-Path $releaseDir "Aethon-VPN-v${Version}-Windows-x64-portable.zip") -Force
 
+# Dedicated Windows 8.1 installer (when makensis is available) and portable zip
+# with WebView2 Fixed Version 109. The Windows 10/11 installer refuses to run on
+# 8.1 because Evergreen WebView2 no longer installs there.
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "package-windows81.ps1") -Version $Version -ReleaseDir $releaseDir
+if ($LASTEXITCODE -ne 0) { throw "Windows 8.1 packaging failed." }
+
 $androidOutputs = @{
     "android/app/build/outputs/apk/release/app-universal-release.apk" = "Aethon-VPN-v${AndroidVersion}-Android-Universal.apk"
     "android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk" = "Aethon-VPN-v${AndroidVersion}-Android-ARMv7.apk"

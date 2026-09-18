@@ -168,10 +168,24 @@ jobs:
 
       - name: Stage release files
         shell: pwsh
+        env:
+          AETHON_SIGN_METHOD: ${{ secrets.AETHON_SIGN_METHOD }}
+          AETHON_SIGN_TIMESTAMP_URL: ${{ secrets.AETHON_SIGN_TIMESTAMP_URL }}
+          WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AETHON_SIGN_ENDPOINT: ${{ secrets.AETHON_SIGN_ENDPOINT }}
+          AETHON_SIGN_ACCOUNT: ${{ secrets.AETHON_SIGN_ACCOUNT }}
+          AETHON_SIGN_CERT_PROFILE: ${{ secrets.AETHON_SIGN_CERT_PROFILE }}
         run: |
           New-Item -ItemType Directory -Force release | Out-Null
           New-Item -ItemType Directory -Force portable | Out-Null
           $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          if ('${{ steps.signing.outputs.available }}' -eq 'true') {
+            $env:AETHON_SIGN_SCRIPT = Join-Path $env:GITHUB_WORKSPACE 'scripts/sign-windows.ps1'
+          }
 
           # Named by exact version, and checked. A wildcard here would silently pick one of
           # several installers if a previous version's bundle were ever present in the target
@@ -201,6 +215,12 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Signing finalized Windows artifacts failed.' }
           }
           Compress-Archive -Path portable/* -DestinationPath "release/Aethon-VPN-v${version}-Windows-x64-portable.zip" -Force
+          # Windows 8.1 cannot install Evergreen WebView2, so a dedicated installer
+          # (when makensis is on the runner) and a portable zip ship WebView2 109.
+          & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:GITHUB_WORKSPACE 'scripts/package-windows81.ps1') `
+            -Version $version `
+            -ReleaseDir (Join-Path $env:GITHUB_WORKSPACE 'release')
+          if ($LASTEXITCODE -ne 0) { throw 'Windows 8.1 packaging failed.' }
           Copy-Item android/app/build/outputs/apk/release/app-universal-release.apk "release/Aethon-VPN-v${version}-Android-Universal.apk"
           Copy-Item android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk "release/Aethon-VPN-v${version}-Android-ARMv7.apk"
           Copy-Item android/app/build/outputs/apk/release/app-arm64-v8a-release.apk "release/Aethon-VPN-v${version}-Android-ARM64.apk"
@@ -243,10 +263,19 @@ jobs:
         env:
           WINDOWS_CERT_SUBJECT: ${{ secrets.WINDOWS_CERT_SUBJECT }}
         run: |
-          ./scripts/verify-windows-signatures.ps1 `
-            release/Aethon-VPN-*-Windows-x64-Installer.exe `
-            release/Aethon-VPN-*-Windows-x64.msi `
-            src-tauri/target/release/aether-gui.exe
+          $win81Installer = @(Get-ChildItem -Path 'release/Aethon-VPN-*-Windows-8.1-x64-Installer.exe' -File -ErrorAction SilentlyContinue)
+          if ($win81Installer.Count -eq 1) {
+            ./scripts/verify-windows-signatures.ps1 `
+              release/Aethon-VPN-*-Windows-x64-Installer.exe `
+              release/Aethon-VPN-*-Windows-x64.msi `
+              src-tauri/target/release/aether-gui.exe `
+              $win81Installer[0].FullName
+          } else {
+            ./scripts/verify-windows-signatures.ps1 `
+              release/Aethon-VPN-*-Windows-x64-Installer.exe `
+              release/Aethon-VPN-*-Windows-x64.msi `
+              src-tauri/target/release/aether-gui.exe
+          }
 
       - name: Confirm the updater publisher pin matches the signature
         if: startsWith(github.ref, 'refs/tags/')

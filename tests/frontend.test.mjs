@@ -304,6 +304,46 @@ test('release version comparison is single-sourced and ordered', async () => {
   assert.match(update, /is_newer_version\("2\.0\.0", "1\.11\.1"\)/);
 });
 
+test('Windows 8.1 gets a dedicated installer, portable package, and WebView2 109 runtime', async () => {
+  const [pkg, workflow, win81, pins, nsis, hooks, main, update, routing, readme] = await Promise.all([
+    read('../package.json'),
+    read('../.github/workflows/release.yml'),
+    read('../scripts/package-windows81.ps1'),
+    read('../scripts/win81-pins.json'),
+    read('../scripts/windows81.nsi'),
+    read('../src-tauri/windows/hooks.nsh'),
+    read('../src-tauri/src/main.rs'),
+    read('../src-tauri/src/update.rs'),
+    read('../src-tauri/src/routing.rs'),
+    read('../docs/README-Windows-8.1.md')
+  ]);
+  const pin = JSON.parse(pins);
+  assert.equal(pin.version, '109.0.1518.78');
+  assert.equal(pin.size, 207090243);
+  assert.match(pin.url, /^https:\/\/github\.com\/westinyang\/WebView2RuntimeArchive\/releases\/download\/109\.0\.1518\.78\//);
+  assert.match(pin.publisher, /Microsoft/);
+  assert.match(JSON.parse(pkg).scripts['package:win81'], /package-windows81\.ps1/);
+  assert.match(workflow, /package-windows81\.ps1/);
+  assert.match(workflow, /Windows-8\.1-x64-Installer\.exe/);
+  assert.match(win81, /Set-PeWindows81Subsystem/);
+  assert.match(win81, /msedgewebview2\.exe/);
+  assert.match(win81, /AETHON_SIGN_SCRIPT/);
+  assert.match(nsis, /AtLeastWin8\.1/);
+  assert.match(nsis, /WebView2Runtime/);
+  assert.match(nsis, /RequestExecutionLevel user/);
+  assert.match(hooks, /NSIS_HOOK_PREINSTALL/);
+  assert.match(hooks, /AtLeastWin10/);
+  assert.match(hooks, /Windows-8\.1-x64-Installer\.exe/);
+  assert.match(main, /WEBVIEW2_BROWSER_EXECUTABLE_FOLDER/);
+  assert.match(main, /prepare_bundled_webview2/);
+  assert.match(update, /Windows-8\.1-x64-Installer\.exe/);
+  assert.match(update, /RtlGetVersion/);
+  assert.match(update, /installer_asset_name_for\(\"2\.1\.1\", Some\(\(6, 3\)\)\)/);
+  assert.match(routing, /Remove-PnpDevice/);
+  assert.match(readme, /Windows 8\.1/);
+  assert.match(readme, /Aethon\.cmd/);
+});
+
 test('Windows VPN lifecycle retains elevation, recovery, TUN readiness, and clean shutdown', async () => {
   const [routing, process, main, hooks] = await Promise.all([
     read('../src-tauri/src/routing.rs'), read('../src-tauri/src/process.rs'), read('../src-tauri/src/main.rs'), read('../src-tauri/windows/hooks.nsh')
