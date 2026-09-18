@@ -1,4 +1,5 @@
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "sha256.ps1")
 $commit = "38148cd835e07d688dbb6b30ae24ad2fd0e5d847"
 $sourceUrl = "https://github.com/Psiphon-Labs/psiphon-tunnel-core.git"
 $expected = "fc52730ba75425c20125b621ed9889b221d26e82631603501e49f1ce85bd039b"
@@ -31,7 +32,7 @@ try {
   $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
   $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
   if ($machine -ne 0x8664) { throw ("Psiphon build is not AMD64 PE (machine 0x{0:X4})." -f $machine) }
-  $actual = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()
+  $actual = Get-Sha256Hex -Path $output
   if ($actual -ne $expected) { throw "Psiphon reproducible-build checksum mismatch. Expected $expected, got $actual." }
   New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
   Copy-Item -LiteralPath $output -Destination $destination -Force
