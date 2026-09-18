@@ -94,13 +94,17 @@ jobs:
       - name: Test Rust backend
         shell: pwsh
         run: |
-          # Redirect at the OS level through cmd, so the log captures cargo's raw output
-          # verbatim (PowerShell stream handling drops or rewrites parts of it).
-          cmd /c "cargo test --manifest-path src-tauri\Cargo.toml --locked > cargo-test.log 2>&1"
-          $code = $LASTEXITCODE
+          # Probe mode while this step is failing on the current runner image: capture
+          # cargo's real exit code (a killed process reports a crash code, not 1) and the
+          # memory left on the machine at the moment it dies. CARGO_BUILD_JOBS=2 halves
+          # peak compiler memory in case the runner is killing it for resource pressure.
+          $env:CARGO_BUILD_JOBS = "2"
+          $proc = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', 'cargo test --manifest-path src-tauri\Cargo.toml --locked > cargo-test.log 2>&1' -PassThru -NoNewWindow
+          $proc.WaitForExit()
+          $code = $proc.ExitCode
+          $avail = (Get-Counter '\Memory\Available MBytes' -ErrorAction SilentlyContinue).CounterSamples[0].CookedValue
+          Write-Host "cargo test exit code: $code ; available memory at exit: $avail MB"
           if ($code -ne 0) {
-            # Surface as much of the failing tail as the annotation limit allows: the
-            # compiler/test diagnostics that matter are the last lines, not the stream.
             Get-Content cargo-test.log -Tail 25 | ForEach-Object { Write-Host "::error::[cargo-test] $_" }
           }
           exit $code
