@@ -1,0 +1,18 @@
+{
+  "_comment": [
+    "WebView2 Fixed Version 109 is the last runtime that still launches on Windows 8.1.",
+    "Evergreen WebView2 (what the Windows 10/11 installer embeds) refuses to install there.",
+    "",
+    "The cabinet is the official Microsoft Fixed Version package, archived at the URL below",
+    "because Microsoft only keeps a short sliding window of Fixed Version downloads.",
+    "The size is the GitHub release-asset size for this exact filename; a mismatch means the",
+    "archive was replaced and the build must stop rather than pack an unverified runtime.",
+    "After extraction, package-windows81.ps1 also requires msedgewebview2.exe to be",
+    "Authenticode-signed by Microsoft before it is copied into the 8.1 installer or portable."
+  ],
+  "version": "109.0.1518.78",
+  "archive": "Microsoft.WebView2.FixedVersionRuntime.109.0.1518.78.x64.cab",
+  "url": "https://github.com/westinyang/WebView2RuntimeArchive/releases/download/109.0.1518.78/Microsoft.WebView2.FixedVersionRuntime.109.0.1518.78.x64.cab",
+  "size": 207090243,
+  "publisher": "Microsoft Corporation"
+}

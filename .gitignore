@@ -19,6 +19,8 @@ src-tauri/binaries/*.dll
 release-v*/
 release/
 portable/
+portable-win81/
+.webview2-cache/
 android/.gradle/
 android/local.properties
 android/app/build/

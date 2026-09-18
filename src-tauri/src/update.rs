@@ -208,6 +208,61 @@ pub(crate) fn is_newer_version(latest: &str, current: &str) -> bool {
     }
 }
 
+/// The installer asset this build should download for `version`.
+///
+/// Windows 8.1 cannot run the Evergreen WebView2 bootstrapper shipped in the
+/// Windows 10/11 installer, so the release workflow publishes a dedicated
+/// `Windows-8.1` NSIS package that embeds WebView2 Fixed Version 109. The
+/// updater has to ask for that file on 8.1 rather than handing the user an
+/// installer that will abort.
+fn installer_asset_name_for(version: &str, nt: Option<(u32, u32)>) -> String {
+    match nt {
+        Some((major, _)) if major < 10 => {
+            format!("Aethon-VPN-v{version}-Windows-8.1-x64-Installer.exe")
+        }
+        _ => format!("Aethon-VPN-v{version}-Windows-x64-Installer.exe"),
+    }
+}
+
+fn windows_nt_version() -> Option<(u32, u32)> {
+    #[cfg(windows)]
+    {
+        #[repr(C)]
+        struct OsVersionInfoW {
+            size: u32,
+            major: u32,
+            minor: u32,
+            build: u32,
+            platform: u32,
+            csd: [u16; 128],
+        }
+        #[link(name = "ntdll")]
+        extern "system" {
+            fn RtlGetVersion(info: *mut OsVersionInfoW) -> i32;
+        }
+        let mut info = OsVersionInfoW {
+            size: std::mem::size_of::<OsVersionInfoW>() as u32,
+            major: 0,
+            minor: 0,
+            build: 0,
+            platform: 0,
+            csd: [0; 128],
+        };
+        // SAFETY: `info` is a well-formed OSVERSIONINFOW whose `size` field is
+        // set, which is all RtlGetVersion reads. STATUS_SUCCESS is 0.
+        let status = unsafe { RtlGetVersion(&mut info) };
+        (status == 0).then_some((info.major, info.minor))
+    }
+    #[cfg(not(windows))]
+    {
+        None
+    }
+}
+
+fn windows_installer_asset_name(version: &str) -> String {
+    installer_asset_name_for(version, windows_nt_version())
+}
+
 async fn checksum_from_manifest(
     http: &reqwest::Client,
     release: &GithubRelease,
@@ -269,7 +324,7 @@ async fn latest_update() -> Result<UpdateInfo, String> {
             if !is_newer_version(&latest, current) {
                 return None;
             }
-            let installer_name = format!("Aethon-VPN-v{latest}-Windows-x64-Installer.exe");
+            let installer_name = windows_installer_asset_name(&latest);
             let asset = release
                 .assets
                 .iter()
@@ -282,7 +337,7 @@ async fn latest_update() -> Result<UpdateInfo, String> {
                 .iter()
                 .filter_map(|release| {
                     let latest = normalized_version(&release.tag_name).to_string();
-                    let installer_name = format!("Aethon-VPN-v{latest}-Windows-x64-Installer.exe");
+                    let installer_name = windows_installer_asset_name(&latest);
                     let asset = release
                         .assets
                         .iter()
@@ -481,6 +536,30 @@ mod tests {
     }
 
     #[test]
+    fn windows_8_1_downloads_the_dedicated_installer_and_windows_10_keeps_the_standard_one() {
+        assert_eq!(
+            installer_asset_name_for("2.1.1", Some((6, 3))),
+            "Aethon-VPN-v2.1.1-Windows-8.1-x64-Installer.exe"
+        );
+        assert_eq!(
+            installer_asset_name_for("2.1.1", Some((6, 2))),
+            "Aethon-VPN-v2.1.1-Windows-8.1-x64-Installer.exe"
+        );
+        assert_eq!(
+            installer_asset_name_for("2.1.1", Some((10, 0))),
+            "Aethon-VPN-v2.1.1-Windows-x64-Installer.exe"
+        );
+        assert_eq!(
+            installer_asset_name_for("2.1.1", Some((11, 0))),
+            "Aethon-VPN-v2.1.1-Windows-x64-Installer.exe"
+        );
+        assert_eq!(
+            installer_asset_name_for("2.1.1", None),
+            "Aethon-VPN-v2.1.1-Windows-x64-Installer.exe"
+        );
+    }
+
+    #[test]
     fn the_endpoints_this_updater_trusts_are_https_and_nothing_else() {
         for endpoint in [RELEASE_API, DOWNLOAD_PREFIX] {
             let url = reqwest::Url::parse(endpoint).expect("a pinned endpoint must parse");
@@ -503,6 +582,17 @@ mod tests {
     fn a_genuine_release_asset_url_is_accepted_unchanged() {
         let asset = "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-x64-Installer.exe";
         assert_eq!(asset, pinned_release_url(asset).unwrap().as_str());
+        let win81 = "https://github.com/hamvex/AetherGUI/releases/download/v2.1.1/Aethon-VPN-v2.1.1-Windows-8.1-x64-Installer.exe";
+        assert_eq!(
+            win81,
+            pinned_release_asset(
+                win81,
+                "v2.1.1",
+                "Aethon-VPN-v2.1.1-Windows-8.1-x64-Installer.exe"
+            )
+            .unwrap()
+            .as_str()
+        );
     }
 
     #[test]
