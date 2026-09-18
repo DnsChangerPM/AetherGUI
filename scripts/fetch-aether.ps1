@@ -68,7 +68,7 @@ try {
   # here at build time instead of on a user's machine at connect time.
   $expectedBinary = $pins.binary.$archiveName
   if ($version -eq $pins.version -and $expectedBinary) {
-    $actualBinary = (Get-FileHash -LiteralPath $binary.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualBinary = Get-Sha256OfFile $binary.FullName
     if ($actualBinary -ne $expectedBinary) {
       throw "The extracted aether.exe does not match the pin in src-tauri/src/process.rs. Expected $expectedBinary, got $actualBinary."
     }

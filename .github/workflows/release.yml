@@ -192,6 +192,15 @@ jobs:
       - name: Stage release files
         shell: pwsh
         run: |
+          # Hashing goes through .NET SHA256, not the Get-FileHash cmdlet: the npm-driven
+          # fetch scripts hit a runner where the cmdlet is not resolvable in Windows
+          # PowerShell 5.1, and this step keeps the same dependency-free path.
+          function Get-Sha256OfFile([string]$Path) {
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            try {
+              return ([System.BitConverter]::ToString($sha.ComputeFile($Path))).Replace("-", "").ToLowerInvariant()
+            } finally { $sha.Dispose() }
+          }
           New-Item -ItemType Directory -Force release | Out-Null
           New-Item -ItemType Directory -Force portable | Out-Null
           $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
@@ -235,7 +244,7 @@ jobs:
           # same directory can hash the checksum file while it is still being written.
           $artifacts = @(Get-ChildItem release -File | Sort-Object -Property Name)
           $lines = foreach ($artifact in $artifacts) {
-            "$((Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLower())  $($artifact.Name)"
+            "$($(Get-Sha256OfFile $artifact.FullName))  $($artifact.Name)"
           }
           # LF, not CRLF. Set-Content writes CRLF on Windows, and `sha256sum -c` then treats
           # the carriage return as part of the filename and reports every line as missing -
@@ -245,11 +254,11 @@ jobs:
           [IO.File]::WriteAllText($sums, ($lines -join "`n") + "`n", (New-Object Text.ASCIIEncoding))
           $bundle = "release/Aethon-VPN-v${version}-all-platforms.zip"
           Compress-Archive -Path ($artifacts.FullName + @($sums)) -DestinationPath $bundle
-          $bundleHash = (Get-FileHash $bundle -Algorithm SHA256).Hash.ToLower()
+          $bundleHash = Get-Sha256OfFile $bundle
           [IO.File]::AppendAllText($sums, "$bundleHash  $([System.IO.Path]::GetFileName($bundle))`n", (New-Object Text.ASCIIEncoding))
           $commit = (& git rev-parse HEAD).Trim()
           $manifest = @(Get-ChildItem release -File | Where-Object { $_.Name -ne 'AETHON_RELEASE_MANIFEST.json' } | Sort-Object Name | ForEach-Object {
-            [ordered]@{ artifact = $_.Name; size = $_.Length; sha256 = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower() }
+            [ordered]@{ artifact = $_.Name; size = $_.Length; sha256 = (Get-Sha256OfFile $_.FullName) }
           })
           [ordered]@{ version = $version; build_commit = $commit; build_date = [DateTime]::UtcNow.ToString('o'); artifacts = $manifest } |
             ConvertTo-Json -Depth 4 | Set-Content release/AETHON_RELEASE_MANIFEST.json -Encoding utf8

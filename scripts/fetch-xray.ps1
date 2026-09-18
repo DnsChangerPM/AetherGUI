@@ -16,6 +16,16 @@ function Download-WithRetry {
   }
 }
 
+# .NET directly rather than the Get-FileHash cmdlet: on current hosted Windows runners the
+# cmdlet is not always resolvable inside Windows PowerShell 5.1, while the SHA256 type is
+# always present. Same algorithm, no cmdlet dependency.
+function Get-Sha256OfFile([string]$Path) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return ([System.BitConverter]::ToString($sha.ComputeFile($Path))).Replace("-", "").ToLowerInvariant()
+  } finally { $sha.Dispose() }
+}
+
 $version = "26.3.27"
 $archiveName = "Xray-windows-64.zip"
 $expected = "d004c39288ce9ada487c6f398c7c545f7d749e44bdfdd59dbc9f865afba4e1ad"
@@ -37,14 +47,14 @@ try {
   New-Item -ItemType Directory -Force $temp | Out-Null
   $archive = Join-Path $temp $archiveName
   Download-WithRetry -Uri $url -OutFile $archive
-  $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+  $actual = Get-Sha256OfFile $archive
   if ($actual -ne $expected) { throw "Xray checksum mismatch. Expected $expected, got $actual." }
   $expanded = Join-Path $temp "expanded"
   Expand-Archive -LiteralPath $archive -DestinationPath $expanded
   foreach ($file in @(@("xray.exe", "xray-x86_64-pc-windows-msvc.exe"), @("wintun.dll", "wintun.dll"))) {
     $source = Join-Path $expanded $file[0]
     if (-not (Test-Path -LiteralPath $source)) { throw "$($file[0]) was not found in the verified Xray archive." }
-    $actualFile = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualFile = Get-Sha256OfFile $source
     if ($actualFile -ne $expectedFiles[$file[0]]) {
       throw "$($file[0]) does not match the digest src-tauri/src/routing.rs enforces. Expected $($expectedFiles[$file[0]]), got $actualFile. Update the constant in routing.rs and here in the same reviewed commit."
     }

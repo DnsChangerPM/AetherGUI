@@ -31,7 +31,7 @@ try {
   $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
   $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
   if ($machine -ne 0x8664) { throw ("Psiphon build is not AMD64 PE (machine 0x{0:X4})." -f $machine) }
-  $actual = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()
+  $actual = Get-Sha256OfFile $output
   if ($actual -ne $expected) { throw "Psiphon reproducible-build checksum mismatch. Expected $expected, got $actual." }
   New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
   Copy-Item -LiteralPath $output -Destination $destination -Force
