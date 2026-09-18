@@ -16,6 +16,16 @@ function Download-WithRetry {
   }
 }
 
+# .NET directly rather than the Get-FileHash cmdlet: on current hosted Windows runners the
+# cmdlet is not always resolvable inside Windows PowerShell 5.1, while the SHA256 type is
+# always present. Same algorithm, no cmdlet dependency.
+function Get-Sha256OfFile([string]$Path) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return ([System.BitConverter]::ToString($sha.ComputeFile($Path))).Replace("-", "").ToLowerInvariant()
+  } finally { $sha.Dispose() }
+}
+
 $pins = Get-Content -LiteralPath (Join-Path $PSScriptRoot "aether-pins.json") -Raw | ConvertFrom-Json
 $version = if ($env:AETHER_CORE_VERSION) { $env:AETHER_CORE_VERSION } else { $pins.version }
 $baseUrl = "https://github.com/CluvexStudio/Aether/releases/download/$version"

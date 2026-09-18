@@ -1,4 +1,14 @@
 $ErrorActionPreference = "Stop"
+# .NET directly rather than the Get-FileHash cmdlet: on current hosted Windows runners the
+# cmdlet is not always resolvable inside Windows PowerShell 5.1, while the SHA256 type is
+# always present. Same algorithm, no cmdlet dependency.
+function Get-Sha256OfFile([string]$Path) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return ([System.BitConverter]::ToString($sha.ComputeFile($Path))).Replace("-", "").ToLowerInvariant()
+  } finally { $sha.Dispose() }
+}
+
 $commit = "38148cd835e07d688dbb6b30ae24ad2fd0e5d847"
 $sourceUrl = "https://github.com/Psiphon-Labs/psiphon-tunnel-core.git"
 $expected = "fc52730ba75425c20125b621ed9889b221d26e82631603501e49f1ce85bd039b"
