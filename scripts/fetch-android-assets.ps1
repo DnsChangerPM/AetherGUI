@@ -1,5 +1,21 @@
 $ErrorActionPreference = "Stop"
 
+# Transient CDN or redirect hiccups on the runner must not fail the release pipeline: the
+# inputs are pinned by digest and safely re-downloadable, so retry before giving up.
+function Download-WithRetry {
+  param([string]$Uri, [string]$OutFile, [int]$Attempts = 5)
+  for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+    try {
+      Invoke-WebRequest -UseBasicParsing $Uri -OutFile $OutFile
+      return
+    } catch {
+      if ($attempt -eq $Attempts) { throw "Download from $Uri failed after $Attempts attempts: $($_.Exception.Message)" }
+      Write-Host "Download attempt $attempt/$Attempts for $Uri failed, retrying in $($attempt * 10) seconds: $($_.Exception.Message)"
+      Start-Sleep -Seconds ($attempt * 10)
+    }
+  }
+}
+
 $pins = Get-Content -LiteralPath (Join-Path $PSScriptRoot "aether-pins.json") -Raw | ConvertFrom-Json
 $aetherVersion = if ($env:AETHER_CORE_VERSION) { $env:AETHER_CORE_VERSION } else { $pins.androidVersion }
 $hevVersion = "2.16.0"
@@ -80,7 +96,7 @@ try {
             Copy-Item -LiteralPath $cacheArchive -Destination $archive
         }
         else {
-            Invoke-WebRequest -UseBasicParsing "$base/$($target.Archive)" -OutFile $archive
+            Download-WithRetry -Uri "$base/$($target.Archive)" -OutFile $archive
         }
         # Pinned in this repository rather than read from beside the archive it verifies:
         # the archive and its .sha256 share one base URL and one trust boundary. See

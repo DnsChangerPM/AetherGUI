@@ -1,4 +1,21 @@
 $ErrorActionPreference = "Stop"
+
+# Transient CDN or redirect hiccups on the runner must not fail the release pipeline: the
+# inputs are pinned by digest and safely re-downloadable, so retry before giving up.
+function Download-WithRetry {
+  param([string]$Uri, [string]$OutFile, [int]$Attempts = 5)
+  for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+    try {
+      Invoke-WebRequest -UseBasicParsing $Uri -OutFile $OutFile
+      return
+    } catch {
+      if ($attempt -eq $Attempts) { throw "Download from $Uri failed after $Attempts attempts: $($_.Exception.Message)" }
+      Write-Host "Download attempt $attempt/$Attempts for $Uri failed, retrying in $($attempt * 10) seconds: $($_.Exception.Message)"
+      Start-Sleep -Seconds ($attempt * 10)
+    }
+  }
+}
+
 $version = "26.3.27"
 $archiveName = "Xray-windows-64.zip"
 $expected = "d004c39288ce9ada487c6f398c7c545f7d749e44bdfdd59dbc9f865afba4e1ad"
@@ -19,7 +36,7 @@ $destination = Join-Path $PSScriptRoot "..\src-tauri\binaries"
 try {
   New-Item -ItemType Directory -Force $temp | Out-Null
   $archive = Join-Path $temp $archiveName
-  Invoke-WebRequest -UseBasicParsing $url -OutFile $archive
+  Download-WithRetry -Uri $url -OutFile $archive
   $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($actual -ne $expected) { throw "Xray checksum mismatch. Expected $expected, got $actual." }
   $expanded = Join-Path $temp "expanded"
