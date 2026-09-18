@@ -1,4 +1,37 @@
 $ErrorActionPreference = "Stop"
+
+# Transient CDN or redirect hiccups on the runner must not fail the release pipeline: the
+# inputs are pinned by digest and safely re-downloadable, so retry before giving up.
+function Download-WithRetry {
+  param([string]$Uri, [string]$OutFile, [int]$Attempts = 5)
+  for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+    try {
+      Invoke-WebRequest -UseBasicParsing $Uri -OutFile $OutFile
+      return
+    } catch {
+      if ($attempt -eq $Attempts) { throw "Download from $Uri failed after $Attempts attempts: $($_.Exception.Message)" }
+      Write-Host "Download attempt $attempt/$Attempts for $Uri failed, retrying in $($attempt * 10) seconds: $($_.Exception.Message)"
+      Start-Sleep -Seconds ($attempt * 10)
+    }
+  }
+}
+
+# .NET directly rather than the Get-FileHash cmdlet: on current hosted Windows runners the
+# cmdlet is not always resolvable inside Windows PowerShell 5.1, while the SHA256 type is
+# always present. Same algorithm, no cmdlet dependency.
+function Get-Sha256OfFile([string]$Path) {
+  # OpenRead + ComputeHash rather than ComputeFile/Get-FileHash: the runner's Windows
+  # PowerShell 5.1 is a legacy runtime where neither resolves, while the stream API has
+  # existed since .NET 2.0.
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+      return ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-", "").ToLowerInvariant()
+    } finally { $stream.Dispose() }
+  } finally { $sha.Dispose() }
+}
+
 $version = "26.3.27"
 $archiveName = "Xray-windows-64.zip"
 $expected = "d004c39288ce9ada487c6f398c7c545f7d749e44bdfdd59dbc9f865afba4e1ad"
@@ -19,15 +52,15 @@ $destination = Join-Path $PSScriptRoot "..\src-tauri\binaries"
 try {
   New-Item -ItemType Directory -Force $temp | Out-Null
   $archive = Join-Path $temp $archiveName
-  Invoke-WebRequest -UseBasicParsing $url -OutFile $archive
-  $actual = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+  Download-WithRetry -Uri $url -OutFile $archive
+  $actual = Get-Sha256OfFile $archive
   if ($actual -ne $expected) { throw "Xray checksum mismatch. Expected $expected, got $actual." }
   $expanded = Join-Path $temp "expanded"
   Expand-Archive -LiteralPath $archive -DestinationPath $expanded
   foreach ($file in @(@("xray.exe", "xray-x86_64-pc-windows-msvc.exe"), @("wintun.dll", "wintun.dll"))) {
     $source = Join-Path $expanded $file[0]
     if (-not (Test-Path -LiteralPath $source)) { throw "$($file[0]) was not found in the verified Xray archive." }
-    $actualFile = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualFile = Get-Sha256OfFile $source
     if ($actualFile -ne $expectedFiles[$file[0]]) {
       throw "$($file[0]) does not match the digest src-tauri/src/routing.rs enforces. Expected $($expectedFiles[$file[0]]), got $actualFile. Update the constant in routing.rs and here in the same reviewed commit."
     }

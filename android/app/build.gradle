@@ -25,10 +25,10 @@ android {
 
     defaultConfig {
         applicationId 'io.github.hamvex.aethergui'
-        minSdk 26
+        minSdk 24
         targetSdk 35
-        versionCode 27
-        versionName '2.1.1'
+        versionCode 28
+        versionName '2.2.0'
     }
 
     signingConfigs {

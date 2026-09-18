@@ -1,4 +1,20 @@
 $ErrorActionPreference = "Stop"
+# .NET directly rather than the Get-FileHash cmdlet: on current hosted Windows runners the
+# cmdlet is not always resolvable inside Windows PowerShell 5.1, while the SHA256 type is
+# always present. Same algorithm, no cmdlet dependency.
+function Get-Sha256OfFile([string]$Path) {
+  # OpenRead + ComputeHash rather than ComputeFile/Get-FileHash: the runner's Windows
+  # PowerShell 5.1 is a legacy runtime where neither resolves, while the stream API has
+  # existed since .NET 2.0.
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+      return ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-", "").ToLowerInvariant()
+    } finally { $stream.Dispose() }
+  } finally { $sha.Dispose() }
+}
+
 $commit = "38148cd835e07d688dbb6b30ae24ad2fd0e5d847"
 $sourceUrl = "https://github.com/Psiphon-Labs/psiphon-tunnel-core.git"
 $expected = "fc52730ba75425c20125b621ed9889b221d26e82631603501e49f1ce85bd039b"
@@ -31,7 +47,7 @@ try {
   $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
   $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
   if ($machine -ne 0x8664) { throw ("Psiphon build is not AMD64 PE (machine 0x{0:X4})." -f $machine) }
-  $actual = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()
+  $actual = Get-Sha256OfFile $output
   if ($actual -ne $expected) { throw "Psiphon reproducible-build checksum mismatch. Expected $expected, got $actual." }
   New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
   Copy-Item -LiteralPath $output -Destination $destination -Force

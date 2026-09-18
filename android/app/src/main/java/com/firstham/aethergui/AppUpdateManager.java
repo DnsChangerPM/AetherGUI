@@ -368,7 +368,7 @@ final class AppUpdateManager {
         } catch (Exception ignored) { return -1; }
     }
     private static boolean notificationsAllowed(Context context) { return Build.VERSION.SDK_INT < 33 || context.checkSelfPermission("android.permission.POST_NOTIFICATIONS") == android.content.pm.PackageManager.PERMISSION_GRANTED; }
-    private static void createNotificationChannel(Context context) { NotificationChannel channel = new NotificationChannel(CHANNEL_ID, context.getString(R.string.update_notification_channel), NotificationManager.IMPORTANCE_DEFAULT); channel.setDescription(context.getString(R.string.update_notification_channel_summary)); context.getSystemService(NotificationManager.class).createNotificationChannel(channel); }
+    private static void createNotificationChannel(Context context) { if (Build.VERSION.SDK_INT < 26) return; NotificationChannel channel = new NotificationChannel(CHANNEL_ID, context.getString(R.string.update_notification_channel), NotificationManager.IMPORTANCE_DEFAULT); channel.setDescription(context.getString(R.string.update_notification_channel_summary)); context.getSystemService(NotificationManager.class).createNotificationChannel(channel); }
 
     static String sha256(File file) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256"); byte[] buffer = new byte[32 * 1024]; int count;

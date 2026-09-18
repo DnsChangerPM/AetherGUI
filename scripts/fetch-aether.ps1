@@ -1,4 +1,37 @@
 $ErrorActionPreference = "Stop"
+
+# Transient CDN or redirect hiccups on the runner must not fail the release pipeline: the
+# inputs are pinned by digest and safely re-downloadable, so retry before giving up.
+function Download-WithRetry {
+  param([string]$Uri, [string]$OutFile, [int]$Attempts = 5)
+  for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+    try {
+      Invoke-WebRequest -UseBasicParsing $Uri -OutFile $OutFile
+      return
+    } catch {
+      if ($attempt -eq $Attempts) { throw "Download from $Uri failed after $Attempts attempts: $($_.Exception.Message)" }
+      Write-Host "Download attempt $attempt/$Attempts for $Uri failed, retrying in $($attempt * 10) seconds: $($_.Exception.Message)"
+      Start-Sleep -Seconds ($attempt * 10)
+    }
+  }
+}
+
+# .NET directly rather than the Get-FileHash cmdlet: on current hosted Windows runners the
+# cmdlet is not always resolvable inside Windows PowerShell 5.1, while the SHA256 type is
+# always present. Same algorithm, no cmdlet dependency.
+function Get-Sha256OfFile([string]$Path) {
+  # OpenRead + ComputeHash rather than ComputeFile/Get-FileHash: the runner's Windows
+  # PowerShell 5.1 is a legacy runtime where neither resolves, while the stream API has
+  # existed since .NET 2.0.
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+      return ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-", "").ToLowerInvariant()
+    } finally { $stream.Dispose() }
+  } finally { $sha.Dispose() }
+}
+
 $pins = Get-Content -LiteralPath (Join-Path $PSScriptRoot "aether-pins.json") -Raw | ConvertFrom-Json
 $version = if ($env:AETHER_CORE_VERSION) { $env:AETHER_CORE_VERSION } else { $pins.version }
 $baseUrl = "https://github.com/CluvexStudio/Aether/releases/download/$version"
@@ -29,7 +62,7 @@ try {
   if ($cacheArchive -and (Test-Path -LiteralPath $cacheArchive -PathType Leaf)) {
     Copy-Item -LiteralPath $cacheArchive -Destination $archive
   } else {
-    Invoke-WebRequest -UseBasicParsing "$baseUrl/$archiveName" -OutFile $archive
+    Download-WithRetry -Uri "$baseUrl/$archiveName" -OutFile $archive
   }
   $stream = [System.IO.File]::OpenRead($archive)
   $sha256 = [System.Security.Cryptography.SHA256]::Create()
@@ -51,7 +84,7 @@ try {
   # here at build time instead of on a user's machine at connect time.
   $expectedBinary = $pins.binary.$archiveName
   if ($version -eq $pins.version -and $expectedBinary) {
-    $actualBinary = (Get-FileHash -LiteralPath $binary.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualBinary = Get-Sha256OfFile $binary.FullName
     if ($actualBinary -ne $expectedBinary) {
       throw "The extracted aether.exe does not match the pin in src-tauri/src/process.rs. Expected $expectedBinary, got $actualBinary."
     }

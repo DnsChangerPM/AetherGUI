@@ -1976,7 +1976,7 @@ async fn system_trace_probe_once(
     emit_data_plane_phase(app, "tls", attempt, tls_ms, "success", "", "");
 
     let http_started = Instant::now();
-    tls.write_all(b"GET /cdn-cgi/trace HTTP/1.1\r\nHost: www.cloudflare.com\r\nUser-Agent: Aethon/2.1.1\r\nAccept: text/plain\r\nConnection: close\r\n\r\n")
+    tls.write_all(b"GET /cdn-cgi/trace HTTP/1.1\r\nHost: www.cloudflare.com\r\nUser-Agent: Aethon/2.2.0\r\nAccept: text/plain\r\nConnection: close\r\n\r\n")
         .await
         .map_err(|error| ProbeFailure {
             message: format!("HTTPS request write failed: {error}"),
