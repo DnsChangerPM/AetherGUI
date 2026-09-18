@@ -6,6 +6,10 @@ import { promisify } from 'node:util';
 import { applyVersion, checkVersions, normalizeVersion, read, readAndroidVersionCode, repoRoot, targets, VERSION_PATTERN } from '../scripts/set-version.mjs';
 
 const run = promisify(execFile);
+// The Windows runner checks this repository out with CRLF. Split on both endings and strip
+// comments without `$`: `.` does not match `\r` in JavaScript, so `/#.*$/` silently matches
+// nothing on a CRLF line and leaves the comment text in the "code" being inspected.
+const codeLines = text => text.split(/\r?\n/).map(line => line.replace(/#.*/, ''));
 const cli = (...args) => run(process.execPath, [join(repoRoot, 'scripts/set-version.mjs'), ...args], { cwd: repoRoot });
 
 const DIFFERENT = '9.9.9';
@@ -105,14 +109,14 @@ test('Digests are computed without depending on the Get-FileHash cmdlet', async 
       assert.match(script, /\. \(Join-Path \$PSScriptRoot "sha256\.ps1"\)/, `${name} does not load the helper`);
       assert.match(script, /Get-Sha256Hex -Path/, `${name} does not hash through the helper`);
     }
-    for (const line of script.split('\n')) {
-      // Comments explain the cmdlet this replaces; only executable text matters.
-      assert.doesNotMatch(line.replace(/#.*$/, ''), /Get-FileHash/, `${name} still calls Get-FileHash: ${line.trim()}`);
+    // Comments explain the cmdlet this replaces; only executable text matters.
+    for (const line of codeLines(script)) {
+      assert.doesNotMatch(line, /Get-FileHash/, `${name} still calls Get-FileHash: ${line.trim()}`);
     }
   }
   const workflow = await read('.github/workflows/release.yml');
-  for (const line of workflow.split('\n')) {
-    assert.doesNotMatch(line.replace(/#.*$/, ''), /Get-FileHash/, `the workflow still calls Get-FileHash: ${line.trim()}`);
+  for (const line of codeLines(workflow)) {
+    assert.doesNotMatch(line, /Get-FileHash/, `the workflow still calls Get-FileHash: ${line.trim()}`);
   }
   assert.match(workflow, /\. \(Join-Path \$env:GITHUB_WORKSPACE 'scripts\/sha256\.ps1'\)/);
 });
