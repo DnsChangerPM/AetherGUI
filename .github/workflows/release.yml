@@ -68,9 +68,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Fetch and verify Aether core
-        run: npm run fetch:core
+        shell: pwsh
+        run: |
+          # Re-emit the tail of the output as error annotations on failure, so a failed
+          # fetch stays diagnosable from the run's annotations alone.
+          $log = Join-Path $env:RUNNER_TEMP 'fetch-aether.log'
+          npm run fetch:core 2>&1 | Tee-Object -FilePath $log | Out-Host
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content $log -Tail 30 | ForEach-Object { Write-Host "::error::[fetch-aether] $_" }
+            exit 1
+          }
       - name: Fetch and verify routing engine
-        run: npm run fetch:routing
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'fetch-xray.log'
+          npm run fetch:routing 2>&1 | Tee-Object -FilePath $log | Out-Host
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content $log -Tail 30 | ForEach-Object { Write-Host "::error::[fetch-xray] $_" }
+            exit 1
+          }
       - name: Test frontend
         run: npm test
       # Runs after the sidecars are fetched and before anything is built, because it is
@@ -125,7 +141,14 @@ jobs:
           }
 
       - name: Fetch verified Android native assets
-        run: npm run fetch:android
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'fetch-android.log'
+          npm run fetch:android 2>&1 | Tee-Object -FilePath $log | Out-Host
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content $log -Tail 30 | ForEach-Object { Write-Host "::error::[fetch-android] $_" }
+            exit 1
+          }
 
       - name: Prepare Android signing key
         if: github.event_name != 'pull_request'
