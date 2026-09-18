@@ -176,6 +176,42 @@ Windows 8.1 artifacts can also be built on their own after a Windows build:
 npm run package:win81
 ```
 
+### Release version
+
+The application version is written down across twelve files: `src-tauri/tauri.conf.json`,
+`src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `package.json`, `package-lock.json`,
+`android/app/build.gradle` (name and code), the Android `app_version` string, the Windows
+drawer, About and Updates surfaces, the diagnostics user agent, and the packaging script
+defaults. One script owns all of them, and `npm test` fails if any of them drift:
+
+```powershell
+node scripts/set-version.mjs 2.2.0                     # stamp 2.2.0, and versionCode 28
+node scripts/set-version.mjs 2.2.0 --version-code 40   # ...with an explicit Android code
+node scripts/set-version.mjs --check                   # exit 1 if any stamp disagrees
+node scripts/set-version.mjs --print                   # the version this commit builds
+```
+
+`README.md` and `AETHON_SBOM.*` are deliberately left alone: both are hand-written records of
+one specific release, with its notes, digests, sizes and commit, so restamping the version
+string in them would make them describe a build they were not generated from.
+
+The release workflow asks for the version when it is started by hand - Actions, *Windows and
+Android release*, **Run workflow**, `app_version` - or equivalently:
+
+```bash
+gh workflow run release.yml -f app_version=2.2.0
+```
+
+- A version is stamped into the checkout before `npm ci`, so that run builds, names and
+  signs `2.2.0` without a commit changing anything.
+- Empty builds the version already committed.
+- On a tag push there is nothing to ask. The tag has to match `src-tauri/tauri.conf.json` or
+  the run fails, so a release can never be published under a tag whose artifacts are named
+  after a different version.
+
+The resolved version is an output of the build job and is what the release notes are headed
+with.
+
 ## Verification
 
 ```powershell

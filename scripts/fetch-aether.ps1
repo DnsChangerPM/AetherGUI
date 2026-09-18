@@ -1,4 +1,5 @@
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "sha256.ps1")
 $pins = Get-Content -LiteralPath (Join-Path $PSScriptRoot "aether-pins.json") -Raw | ConvertFrom-Json
 $version = if ($env:AETHER_CORE_VERSION) { $env:AETHER_CORE_VERSION } else { $pins.version }
 $baseUrl = "https://github.com/CluvexStudio/Aether/releases/download/$version"
@@ -31,15 +32,9 @@ try {
   } else {
     Invoke-WebRequest -UseBasicParsing "$baseUrl/$archiveName" -OutFile $archive
   }
-  $stream = [System.IO.File]::OpenRead($archive)
-  $sha256 = [System.Security.Cryptography.SHA256]::Create()
-  try {
-    $actual = ([System.BitConverter]::ToString($sha256.ComputeHash($stream))).Replace("-", "").ToLowerInvariant()
-  }
-  finally {
-    $stream.Dispose()
-    $sha256.Dispose()
-  }
+  # Get-Sha256Hex (scripts/sha256.ps1) rather than Get-FileHash: the digest check below is the
+  # reason this script exists, and it has to survive a runner where the cmdlet cannot be found.
+  $actual = Get-Sha256Hex -Path $archive
   if ($actual -ne $expected) { throw "Aether core checksum mismatch. Expected $expected, got $actual." }
   $expanded = Join-Path $temp "expanded"
   Expand-Archive -LiteralPath $archive -DestinationPath $expanded
@@ -51,7 +46,7 @@ try {
   # here at build time instead of on a user's machine at connect time.
   $expectedBinary = $pins.binary.$archiveName
   if ($version -eq $pins.version -and $expectedBinary) {
-    $actualBinary = (Get-FileHash -LiteralPath $binary.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualBinary = Get-Sha256Hex -Path $binary.FullName
     if ($actualBinary -ne $expectedBinary) {
       throw "The extracted aether.exe does not match the pin in src-tauri/src/process.rs. Expected $expectedBinary, got $actualBinary."
     }
